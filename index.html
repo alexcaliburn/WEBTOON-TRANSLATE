@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="theme-color" content="#100d19">
+
+  <title>WEBTOON TRANSLATOR</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+
+    * {
+
+      box-sizing: border-box;
+
+    }
+
+    body {
+
+      margin: 0;
+
+      font-family: Arial, sans-serif;
+
+      background: #100d19;
+
+      color: white;
+
+    }
+
+    header {
+
+      text-align: center;
+
+      padding: 30px 15px;
+
+      background: #1c1630;
+
+      border-bottom: 2px solid #a855f7;
+
+    }
+
+    h1 {
+
+      color: #c084fc;
+
+      font-size: 27px;
+
+      margin: 0;
+
+    }
+
+    header p {
+
+      color: #c4b5d8;
+
+      margin-bottom: 0;
+
+    }
+
+    main {
+
+      max-width: 650px;
+
+      margin: 30px auto;
+
+      padding: 15px;
+
+    }
+
+    .panel {
+
+      background: #1c1630;
+
+      padding: 22px;
+
+      border: 1px solid #49346b;
+
+      border-radius: 15px;
+
+    }
+
+    h2 {
+
+      color: #c084fc;
+
+    }
+
+    .upload {
+
+      display: block;
+
+      padding: 20px;
+
+      margin: 20px 0;
+
+      border: 2px dashed #9333ea;
+
+      border-radius: 12px;
+
+      text-align: center;
+
+    }
+
+    input {
+
+      width: 100%;
+
+      margin-top: 15px;
+
+      color: white;
+
+    }
+
+    #preview {
+
+      display: none;
+
+      width: 100%;
+
+      height: auto;
+
+      margin-top: 20px;
+
+      border-radius: 10px;
+
+    }
+
+    button {
+
+      width: 100%;
+
+      padding: 15px;
+
+      border: none;
+
+      border-radius: 10px;
+
+      background: #9333ea;
+
+      color: white;
+
+      font-size: 16px;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
+    }
+
+    button:disabled {
+
+      opacity: 0.5;
+
+      cursor: not-allowed;
+
+    }
+
+    #message {
+
+      margin-top: 20px;
+
+      color: #c084fc;
+
+      text-align: center;
+
+      overflow-wrap: anywhere;
+
+    }
+
+    .result {
+
+      display: none;
+
+      margin-top: 25px;
+
+      padding: 15px;
+
+      background: #100d19;
+
+      border-radius: 10px;
+
+      border: 1px solid #49346b;
+
+    }
+
+    #detectedText {
+
+      white-space: pre-wrap;
+
+      overflow-wrap: anywhere;
+
+      line-height: 1.6;
+
+    }
+
+    .note {
+
+      color: #a99bbd;
+
+      font-size: 13px;
+
+      text-align: center;
+
+      margin-top: 20px;
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<header>
+
+  <h1>WEBTOON TRANSLATOR</h1>
+
+  <p>Lis tes webtoons dans ta langue</p>
+
+</header>
+
+<main>
+
+  <div class="panel">
+
+    <h2>Traduire un webtoon</h2>
+
+    <p>
+
+      Importe une image contenant du texte coréen.
+
+      Le site va essayer de reconnaître les caractères.
+
+    </p>
+
+    <div class="upload">
+
+      <label for="imageInput">Choisir une image</label>
+
+      <input
+
+        type="file"
+
+        id="imageInput"
+
+        accept="image/*"
+
+      >
+
+    </div>
+
+    <img id="preview" alt="Aperçu du webtoon">
+
+    <button id="translateButton" disabled>
+
+      Analyser le texte coréen
+
+    </button>
+
+    <p id="message">
+
+      En attente d'une image.
+
+    </p>
+
+    <div class="result" id="result">
+
+      <h2>Texte détecté</h2>
+
+      <p id="detectedText"></p>
+
+    </div>
+
+    <p class="note">
+
+      Première version : reconnaissance du coréen uniquement.
+
+      La traduction française sera ajoutée ensuite.
+
+    </p>
+
+  </div>
+
+</main>
+
+<script>
+
+  const imageInput = document.getElementById("imageInput");
+
+  const preview = document.getElementById("preview");
+
+  const message = document.getElementById("message");
+
+  const translateButton = document.getElementById("translateButton");
+
+  const detectedText = document.getElementById("detectedText");
+
+  const resultBox = document.getElementById("result");
+
+  let selectedImage = null;
+
+  imageInput.addEventListener("change", function() {
+
+    const file = this.files[0];
+
+    resultBox.style.display = "none";
+
+    detectedText.textContent = "";
+
+    if (!file) {
+
+      selectedImage = null;
+
+      preview.style.display = "none";
+
+      translateButton.disabled = true;
+
+      message.textContent = "Aucune image sélectionnée.";
+
+      return;
+
+    }
+
+    if (!file.type.startsWith("image/")) {
+
+      selectedImage = null;
+
+      translateButton.disabled = true;
+
+      message.textContent = "Choisis un fichier image valide.";
+
+      return;
+
+    }
+
+    selectedImage = file;
+
+    preview.src = URL.createObjectURL(file);
+
+    preview.style.display = "block";
+
+    translateButton.disabled = false;
+
+    message.textContent = "Image importée avec succès !";
+
+  });
+
+  translateButton.addEventListener("click", analyzeImage);
+
+  async function analyzeImage() {
+
+    if (!selectedImage) {
+
+      message.textContent = "Importe d'abord une image.";
+
+      return;
+
+    }
+
+    if (typeof Tesseract === "undefined") {
+
+      message.textContent =
+
+        "Impossible de charger le moteur OCR. Vérifie ta connexion Internet.";
+
+      return;
+
+    }
+
+    translateButton.disabled = true;
+
+    resultBox.style.display = "none";
+
+    detectedText.textContent = "";
+
+    message.textContent =
+
+      "Préparation de la reconnaissance coréenne...";
+
+    let worker = null;
+
+    try {
+
+      worker = await Tesseract.createWorker(
+
+        "kor",
+
+        1,
+
+        {
+
+          logger: function(info) {
+
+            if (info.status === "loading language traineddata") {
+
+              message.textContent =
+
+                "Téléchargement du modèle coréen...";
+
+            }
+
+            if (info.status === "recognizing text") {
+
+              message.textContent =
+
+                "Analyse : " +
+
+                Math.round(info.progress * 100) + "%";
+
+            }
+
+          }
+
+        }
+
+      );
+
+      const result = await worker.recognize(selectedImage);
+
+      const text = result.data.text.trim();
+
+      if (text.length > 0) {
+
+        detectedText.textContent = text;
+
+        resultBox.style.display = "block";
+
+        message.textContent = "Reconnaissance terminée !";
+
+      } else {
+
+        message.textContent =
+
+          "Aucun texte détecté. Essaie avec une image plus nette.";
+
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+      message.textContent =
+
+        "Erreur OCR : " +
+
+        (error.message || "Impossible d'analyser cette image.");
+
+    } finally {
+
+      if (worker) {
+
+        await worker.terminate();
+
+      }
+
+      translateButton.disabled = false;
+
+    }
+
+  }
+
+</script>
+
+</body>
+
+</html>
