@@ -118,10 +118,47 @@
       }
     });
 
-    function translateImage() {
-      if (!imageInput.files.length) {
-        message.textContent = "Importe d'abord une image.";
-        return;
+    
+async function translateImage() {
+  if (!imageInput.files.length) {
+    message.textContent = "Importe d'abord une image.";
+    return;
+  }
+
+  message.textContent = "Analyse de l'image en cours...";
+
+  try {
+    const result = await Tesseract.recognize(
+      imageInput.files[0],
+      "kor",
+      {
+        logger: info => {
+          if (info.status === "recognizing text") {
+            message.textContent =
+              "Reconnaissance : " +
+              Math.round(info.progress * 100) + "%";
+          }
+        }
+      }
+    );
+
+    const detectedText = result.data.text.trim();
+
+    if (detectedText) {
+      message.textContent =
+        "Texte détecté : " + detectedText;
+    } else {
+      message.textContent =
+        "Aucun texte détecté. Essaie avec une image plus nette.";
+    }
+
+  } catch (error) {
+    message.textContent =
+      "Erreur pendant la reconnaissance du texte.";
+    console.error(error);
+  }
+}
+
       }
 
       message.textContent =
